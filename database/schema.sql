@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS job_applications (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    full_name VARCHAR(120) NOT NULL,
+    email VARCHAR(160) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    birth_date DATE NOT NULL,
+    city VARCHAR(80) NOT NULL,
+    nationality VARCHAR(80) NOT NULL,
+    position VARCHAR(120) NOT NULL,
+    education VARCHAR(80) NOT NULL,
+    major VARCHAR(120) NOT NULL,
+    experience VARCHAR(80) NOT NULL,
+    current_job VARCHAR(120) NULL,
+    cv_file VARCHAR(255) NOT NULL,
+    applied_before VARCHAR(10) NOT NULL,
+    availability VARCHAR(20) NOT NULL,
+    application_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY unique_application (email, position),
+    KEY application_date_index (application_date),
+    KEY position_index (position)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

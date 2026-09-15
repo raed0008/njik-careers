@@ -16,3 +16,15 @@ jobs:
         run: |
           php -l careers.php
           php -l config.example.php
+          php -l api/apply.php
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build React application
+        run: npm run build

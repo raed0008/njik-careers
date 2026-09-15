@@ -4,3 +4,8 @@ smtp_debug.log
 uploads/cv/*
 !uploads/cv/.gitkeep
 .DS_Store
+node_modules/
+dist/
+.vite/
+.tools/
+.publish/
