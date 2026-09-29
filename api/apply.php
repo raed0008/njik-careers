@@ -77,7 +77,7 @@ function sendRecruitmentEmail(array $data, $cvPath, array $config)
               <div style='padding:28px 32px;background:#191919;color:#fff'><div style='color:#f26522;font-weight:700'>نجيك | الموارد البشرية</div><h2>طلب توظيف جديد</h2></div>
               <div style='padding:28px 32px'>
                 <h3 style='border-right:4px solid #f26522;padding-right:10px'>البيانات الشخصية</h3>
-                <p><b>الاسم:</b> {$safe['full_name']}</p><p><b>البريد:</b> {$safe['email']}</p><p><b>الجوال:</b> {$safe['phone']}</p>
+                <p><b>الاسم:</b> {$safe['full_name']}</p><p><b>البريد:</b> {$safe['email']}</p><p><b>الجوال:</b> {$safe['phone']}</p><p><b>LinkedIn:</b> {$safe['linkedin_url']}</p>
                 <p><b>تاريخ الميلاد:</b> {$safe['birth_date']}</p><p><b>المدينة:</b> {$safe['city']}</p><p><b>الجنسية:</b> {$safe['nationality']}</p>
                 <h3 style='border-right:4px solid #f26522;padding-right:10px;margin-top:28px'>الوظيفة والخبرة</h3>
                 <p><b>الوظيفة المطلوبة:</b> {$safe['position_label']}</p><p><b>الوظيفة الحالية:</b> {$safe['current_job']}</p>
@@ -86,7 +86,7 @@ function sendRecruitmentEmail(array $data, $cvPath, array $config)
                 <p style='padding:14px;background:#fff2e9'>السيرة الذاتية مرفقة بهذه الرسالة.</p>
               </div>
             </div></body></html>";
-        $mail->AltBody = "طلب توظيف جديد\nالاسم: {$data['full_name']}\nالبريد: {$data['email']}\nالوظيفة: {$data['position_label']}";
+        $mail->AltBody = "طلب توظيف جديد\nالاسم: {$data['full_name']}\nالبريد: {$data['email']}\nLinkedIn: {$data['linkedin_url']}\nالوظيفة: {$data['position_label']}";
         $mail->send();
         return true;
     } catch (Throwable $exception) {
@@ -131,11 +131,19 @@ try {
     $fullName = cleanField('full_name');
     $email = cleanField('email');
     $phone = cleanField('phone');
+    $linkedinUrl = cleanField('linkedin_url', false);
     $city = cleanField('city');
     $nationality = cleanField('nationality');
     if (mb_strlen($fullName) < 6 || mb_strlen($fullName) > 120) throw new RuntimeException('يرجى إدخال الاسم الكامل كما يظهر في الهوية.');
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new RuntimeException('البريد الإلكتروني غير صحيح. يرجى مراجعته.');
     if (!preg_match('/^[0-9+\-\s()]{8,20}$/', $phone)) throw new RuntimeException('رقم الجوال غير صحيح.');
+    if ($linkedinUrl !== '') {
+        $linkedinHost = (string) parse_url($linkedinUrl, PHP_URL_HOST);
+        $linkedinScheme = strtolower((string) parse_url($linkedinUrl, PHP_URL_SCHEME));
+        if (mb_strlen($linkedinUrl) > 255 || !filter_var($linkedinUrl, FILTER_VALIDATE_URL) || $linkedinScheme !== 'https' || !preg_match('/(^|\.)linkedin\.com$/i', $linkedinHost)) {
+            throw new RuntimeException('رابط LinkedIn غير صحيح. استخدم رابط ملفك الكامل الذي يبدأ بـ https://.');
+        }
+    }
 
     $day = filter_input(INPUT_POST, 'birth_day', FILTER_VALIDATE_INT);
     $month = filter_input(INPUT_POST, 'birth_month', FILTER_VALIDATE_INT);
@@ -164,9 +172,11 @@ try {
     if ($extension !== 'pdf' || $signature !== '%PDF-') throw new RuntimeException('السيرة الذاتية يجب أن تكون ملف PDF صالحًا.');
 
     $configPath = dirname(__DIR__) . '/config.local.php';
-    if (!is_file($configPath)) throw new RuntimeException('إعدادات الاستقبال غير متوفرة حاليًا. يرجى المحاولة لاحقًا.');
-    $config = require $configPath;
-    if (!isset($config['database'], $config['mail'])) throw new RuntimeException('إعدادات النظام غير مكتملة.');
+    $serverName = strtolower((string) ($_SERVER['SERVER_NAME'] ?? ''));
+    $isLocalRequest = in_array($serverName, ['127.0.0.1', 'localhost', '::1'], true);
+    $config = is_file($configPath) ? require $configPath : null;
+    if (!$config && !$isLocalRequest) throw new RuntimeException('إعدادات الاستقبال غير متوفرة حاليًا. يرجى المحاولة لاحقًا.');
+    if ($config && !isset($config['database'], $config['mail'])) throw new RuntimeException('إعدادات النظام غير مكتملة.');
 
     $uploadDirectory = dirname(__DIR__) . '/uploads/cv/';
     if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0755, true)) throw new RuntimeException('تعذر تجهيز مساحة حفظ السيرة الذاتية.');
@@ -174,21 +184,55 @@ try {
     $savedPath = $uploadDirectory . $savedName;
     if (!move_uploaded_file($temporaryFile, $savedPath)) throw new RuntimeException('تعذر حفظ السيرة الذاتية.');
 
+    if (!$config) {
+        $storageDirectory = dirname(__DIR__) . '/storage/';
+        if (!is_dir($storageDirectory) && !mkdir($storageDirectory, 0755, true)) throw new RuntimeException('تعذر تجهيز مساحة حفظ الطلب المحلي.');
+        $localApplication = [
+            'submitted_at' => date(DATE_ATOM),
+            'full_name' => $fullName,
+            'email' => $email,
+            'phone' => $phone,
+            'linkedin_url' => $linkedinUrl ?: null,
+            'birth_date' => $birthDate,
+            'city' => $city,
+            'nationality' => $nationality,
+            'position' => $position,
+            'education' => $educationValue,
+            'major' => $major,
+            'experience' => $experienceValue,
+            'current_job' => $currentJob,
+            'cv_file' => $savedName,
+            'applied_before' => $appliedBeforeValue,
+            'availability' => $availabilityValue,
+        ];
+        $encodedApplication = json_encode($localApplication, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($encodedApplication === false || file_put_contents($storageDirectory . 'applications.jsonl', $encodedApplication . PHP_EOL, FILE_APPEND | LOCK_EX) === false) {
+            throw new RuntimeException('تعذر حفظ بيانات الطلب المحلي.');
+        }
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        respond(201, [
+            'success' => true,
+            'delivery_mode' => 'local',
+            'message' => 'تم حفظ طلبك والسيرة الذاتية محليًا بنجاح لأغراض المعاينة.',
+            'csrf_token' => $_SESSION['csrf_token'],
+        ]);
+    }
+
     $database = $config['database'];
     $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $database['host'], $database['port'], $database['name']);
     $pdo = new PDO($dsn, $database['username'], $database['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES => false]);
     $statement = $pdo->prepare('INSERT INTO job_applications
-        (full_name, email, phone, birth_date, city, nationality, position, education, major, experience, current_job, cv_file, applied_before, availability, application_date)
-        VALUES (:full_name, :email, :phone, :birth_date, :city, :nationality, :position, :education, :major, :experience, :current_job, :cv_file, :applied_before, :availability, NOW())');
+        (full_name, email, phone, linkedin_url, birth_date, city, nationality, position, education, major, experience, current_job, cv_file, applied_before, availability, application_date)
+        VALUES (:full_name, :email, :phone, :linkedin_url, :birth_date, :city, :nationality, :position, :education, :major, :experience, :current_job, :cv_file, :applied_before, :availability, NOW())');
     $statement->execute([
-        ':full_name' => $fullName, ':email' => $email, ':phone' => $phone, ':birth_date' => $birthDate,
+        ':full_name' => $fullName, ':email' => $email, ':phone' => $phone, ':linkedin_url' => $linkedinUrl ?: null, ':birth_date' => $birthDate,
         ':city' => $city, ':nationality' => $nationality, ':position' => $position, ':education' => $educationValue,
         ':major' => $major, ':experience' => $experienceValue, ':current_job' => $currentJob, ':cv_file' => $savedName,
         ':applied_before' => $appliedBeforeValue, ':availability' => $availabilityValue,
     ]);
 
     $mailSent = sendRecruitmentEmail([
-        'full_name' => $fullName, 'email' => $email, 'phone' => $phone, 'birth_date' => $birthDate,
+        'full_name' => $fullName, 'email' => $email, 'phone' => $phone, 'linkedin_url' => $linkedinUrl ?: 'غير مضاف', 'birth_date' => $birthDate,
         'city' => $city, 'nationality' => $nationality, 'position_label' => $positions[$position],
         'current_job' => $currentJob, 'availability_label' => $availability[$availabilityValue],
         'applied_before_label' => $appliedBefore[$appliedBeforeValue], 'education' => $educationValue,

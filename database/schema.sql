@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS job_applications (
     full_name VARCHAR(120) NOT NULL,
     email VARCHAR(160) NOT NULL,
     phone VARCHAR(20) NOT NULL,
+    linkedin_url VARCHAR(255) NULL,
     birth_date DATE NOT NULL,
     city VARCHAR(80) NOT NULL,
     nationality VARCHAR(80) NOT NULL,

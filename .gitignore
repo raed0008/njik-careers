@@ -3,6 +3,7 @@ error_log
 smtp_debug.log
 uploads/cv/*
 !uploads/cv/.gitkeep
+storage/
 .DS_Store
 node_modules/
 dist/

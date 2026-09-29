@@ -18,7 +18,7 @@ const steps = [
 ];
 
 const stepFields = [
-  ['full_name', 'email', 'phone', 'birth_day', 'birth_month', 'birth_year', 'city', 'nationality'],
+  ['full_name', 'email', 'phone', 'linkedin_url', 'birth_day', 'birth_month', 'birth_year', 'city', 'nationality'],
   ['position', 'availability', 'applied_before'],
   ['education', 'major', 'experience'],
   ['cv_file', 'privacy_consent'],
@@ -26,9 +26,9 @@ const stepFields = [
 
 const optionLabel = (options, value) => options.find(([key]) => key === value)?.[1] || '—';
 
-function Field({ label, name, error, optional = false, help, children }) {
+function Field({ label, name, error, optional = false, help, className = '', children }) {
   return (
-    <div className="field">
+    <div className={`field ${className}`.trim()}>
       <label htmlFor={name}>
         {label} {!optional && <span className="required">*</span>}
         {optional && <span className="optional">اختياري</span>}
@@ -108,6 +108,16 @@ function App() {
     if (nameLength < 6) nextErrors.full_name = 'اكتب الاسم الكامل كما يظهر في الهوية.';
     if (!/^\S+@\S+\.\S+$/.test(form.email)) nextErrors.email = 'أدخل بريدًا إلكترونيًا صحيحًا.';
     if (!/^[0-9+\-\s()]{8,20}$/.test(form.phone)) nextErrors.phone = 'أدخل رقم جوال صحيحًا مع رمز الدولة عند الحاجة.';
+    if (form.linkedin_url.trim()) {
+      try {
+        const linkedInUrl = new URL(form.linkedin_url.trim());
+        if (linkedInUrl.protocol !== 'https:' || !/(^|\.)linkedin\.com$/i.test(linkedInUrl.hostname)) {
+          nextErrors.linkedin_url = 'أدخل رابط ملف LinkedIn صحيحًا يبدأ بـ https://.';
+        }
+      } catch {
+        nextErrors.linkedin_url = 'أدخل رابط ملف LinkedIn صحيحًا يبدأ بـ https://.';
+      }
+    }
     ['birth_day', 'birth_month', 'birth_year'].forEach((key) => {
       if (!form[key]) nextErrors[key] = 'أكمل تاريخ الميلاد.';
     });
@@ -190,6 +200,7 @@ function App() {
       setServerMessage({ type: 'success', text: data.message });
     } catch (error) {
       setServerMessage({ type: 'error', text: error.message || 'تعذر الاتصال بالخادم. حاول مرة أخرى لاحقًا.' });
+      requestAnimationFrame(() => document.querySelector('.application-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     } finally {
       setIsSubmitting(false);
     }
@@ -198,6 +209,7 @@ function App() {
   const summary = [
     ['الاسم', form.full_name || '—'],
     ['البريد الإلكتروني', form.email || '—'],
+    ['LinkedIn', form.linkedin_url || '—'],
     ['الوظيفة المطلوبة', optionLabel(positions, form.position)],
     ['المدينة', form.city || '—'],
     ['المؤهل', form.education || '—'],
@@ -208,7 +220,9 @@ function App() {
     <div className="app">
       <header className="topbar">
         <div className="topbar-inner">
-          <a className="brand" href="/" aria-label="نجيك - الرئيسية"><span className="brand-mark">ن</span><span>نجيك</span></a>
+          <a className="brand" href="/" aria-label="نجيك - الرئيسية">
+            <img className="brand-logo" src="/njik-logo.png" alt="نجيك" />
+          </a>
           <span className="topbar-label">بوابة الفرص المهنية</span>
         </div>
       </header>
@@ -216,7 +230,7 @@ function App() {
       <main>
         <section className="hero" aria-labelledby="page-title">
           <div className="hero-inner">
-            <div><p className="eyebrow">اصنع أثرًا معنا</p><h1 id="page-title">مكانك القادم قد يكون بيننا.</h1><p className="hero-copy">نبحث عن أشخاص يؤمنون بأن الخدمة الممتازة تبدأ بفريق استثنائي. شاركنا خبرتك وطموحك، ودعنا نتعرّف عليك.</p></div>
+            <div><p className="eyebrow">فرصتك تبدأ من هنا</p><h1 id="page-title">انضم إلى فريق نجيك</h1><p className="hero-copy">نبحث عن أشخاص شغوفين بالتطوير وصناعة أفضل تجربة لعملائنا. شاركنا خبراتك وطموحاتك.</p></div>
             <div className="hero-facts"><div className="fact"><strong>3–5 دقائق</strong><span>الوقت المتوقع لإكمال الطلب</span></div><div className="fact"><strong>PDF فقط</strong><span>السيرة الذاتية بحد أقصى 5 MB</span></div></div>
           </div>
         </section>
@@ -251,9 +265,10 @@ function App() {
                     <div className="panel-heading"><span className="panel-kicker">الخطوة {currentStep + 1} من 4</span><h3 id={`step-${currentStep}-title`} tabIndex="-1" ref={panelHeadingRef}>{steps[currentStep].title}</h3><p>{steps[currentStep].description}</p></div>
 
                     {currentStep === 0 && <div className="form-grid">
-                      <div className="full"><Field label="الاسم الكامل (رباعي)" name="full_name" error={errors.full_name}><TextInput name="full_name" value={form.full_name} onChange={updateField} error={errors.full_name} autoComplete="name" maxLength="120" /></Field></div>
+                      <Field className="full" label="الاسم الكامل (رباعي)" name="full_name" error={errors.full_name}><TextInput name="full_name" value={form.full_name} onChange={updateField} error={errors.full_name} autoComplete="name" maxLength="120" /></Field>
                       <Field label="البريد الإلكتروني" name="email" error={errors.email} help="سنستخدمه للتواصل بخصوص طلبك."><TextInput className="ltr" type="email" name="email" value={form.email} onChange={updateField} error={errors.email} placeholder="name@example.com" autoComplete="email" /></Field>
                       <Field label="رقم الجوال" name="phone" error={errors.phone}><TextInput className="ltr" type="tel" name="phone" value={form.phone} onChange={updateField} error={errors.phone} placeholder="+966 5X XXX XXXX" autoComplete="tel" /></Field>
+                      <div className="full"><Field label="رابط LinkedIn" name="linkedin_url" error={errors.linkedin_url} optional help="أضف رابط ملفك الشخصي الكامل على LinkedIn."><TextInput className="ltr" type="url" name="linkedin_url" value={form.linkedin_url} onChange={updateField} error={errors.linkedin_url} placeholder="https://www.linkedin.com/in/username" autoComplete="url" maxLength="255" /></Field></div>
                       <div className="field full"><span className="group-label">تاريخ الميلاد <span className="required">*</span></span><div className="date-grid">
                         <select name="birth_day" aria-label="اليوم" value={form.birth_day} onChange={updateField} aria-invalid={Boolean(errors.birth_day)}><option value="">اليوم</option>{Array.from({ length: 31 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}</select>
                         <select name="birth_month" aria-label="الشهر" value={form.birth_month} onChange={updateField} aria-invalid={Boolean(errors.birth_month)}><option value="">الشهر</option>{months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select>

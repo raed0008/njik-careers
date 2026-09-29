@@ -53,6 +53,7 @@ export const emptyForm = {
   full_name: '',
   email: '',
   phone: '',
+  linkedin_url: '',
   birth_day: '',
   birth_month: '',
   birth_year: '',
