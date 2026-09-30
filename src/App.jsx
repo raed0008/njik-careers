@@ -8,20 +8,20 @@ import {
   months,
   positions,
 } from './data.js';
-import { ArrowIcon, CheckIcon, ClockIcon, UploadIcon } from './icons.jsx';
+import { ArrowIcon, BriefcaseIcon, BuildingIcon, CheckIcon, ClockIcon, LocationIcon, UploadIcon } from './icons.jsx';
 
 const steps = [
-  { short: 'بياناتك', title: 'لنبدأ بالتعرّف عليك', description: 'اكتب بيانات التواصل كما تظهر في مستنداتك الرسمية.' },
-  { short: 'الفرصة', title: 'أي فرصة تبحث عنها؟', description: 'اختر المجال الأقرب لك وأخبرنا عن وضعك المهني الحالي.' },
+  { short: 'بياناتك', title: 'بياناتك الشخصية', description: 'الحقول التي تحمل علامة * مطلوبة.' },
+  { short: 'معلومات إضافية', title: 'معلومات الوظيفة', description: 'اختر المجال الأقرب لك وأخبرنا عن وضعك المهني الحالي.' },
   { short: 'الخبرة', title: 'دراستك وخبرتك', description: 'هذه المعلومات تساعدنا على مواءمة طلبك مع الفرصة المناسبة.' },
-  { short: 'السيرة والمراجعة', title: 'أضف سيرتك وراجع الطلب', description: 'تأكد من أن سيرتك حديثة وواضحة قبل الإرسال.' },
+  { short: 'مراجعة وإرسال', title: 'راجع طلبك وأرسله', description: 'تأكد من صحة بياناتك قبل إرسال طلب التوظيف.' },
 ];
 
 const stepFields = [
-  ['full_name', 'email', 'phone', 'linkedin_url', 'birth_day', 'birth_month', 'birth_year', 'city', 'nationality'],
+  ['full_name', 'email', 'phone', 'linkedin_url', 'birth_day', 'birth_month', 'birth_year', 'city', 'nationality', 'cv_file'],
   ['position', 'availability', 'applied_before'],
   ['education', 'major', 'experience'],
-  ['cv_file', 'privacy_consent'],
+  ['privacy_consent'],
 ];
 
 const optionLabel = (options, value) => options.find(([key]) => key === value)?.[1] || '—';
@@ -40,9 +40,10 @@ function Field({ label, name, error, optional = false, help, className = '', chi
   );
 }
 
-function TextInput({ name, value, onChange, error, ...props }) {
+function TextInput({ name, value, onChange, error, type = 'text', ...props }) {
   return (
     <input
+      type={type}
       id={name}
       name={name}
       value={value}
@@ -216,97 +217,116 @@ function App() {
     ['الخبرة', optionLabel(experienceOptions, form.experience)],
   ];
 
+  const uploadField = (
+    <div className="field full upload-section">
+      <label htmlFor="cv_file">السيرة الذاتية <span className="required">*</span></label>
+      <small className="upload-description">يرجى رفع ملف واحد بصيغة PDF بحد أقصى 5 MB.</small>
+      <label className={`upload-box ${isDragging ? 'is-dragging' : ''}`} onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={() => setIsDragging(false)} onDrop={(event) => { event.preventDefault(); setIsDragging(false); selectFile(event.dataTransfer.files[0]); }}>
+        <input id="cv_file" type="file" accept="application/pdf,.pdf" onChange={(event) => selectFile(event.target.files[0])} />
+        <span><span className="upload-icon"><UploadIcon /></span><span className="upload-title">اختر ملف السيرة الذاتية</span><span className="upload-hint">PDF فقط، بحد أقصى 5 MB</span></span>
+      </label>
+      {cvFile && !errors.cv_file && <p className="file-status">تم اختيار: {cvFile.name} ({(cvFile.size / 1048576).toFixed(1)} MB)</p>}
+      {errors.cv_file && <small className="field-error">{errors.cv_file}</small>}
+    </div>
+  );
+
   return (
     <div className="app">
       <header className="topbar">
         <div className="topbar-inner">
-          <a className="brand" href="/" aria-label="نجيك - الرئيسية">
-            <img className="brand-logo" src="/njik-logo.png" alt="نجيك" />
-          </a>
-          <span className="topbar-label">بوابة الفرص المهنية</span>
+          <a className="brand" href="/" aria-label="نجيك - الرئيسية"><img className="brand-logo" src="/njik-logo.png" alt="نجيك" /></a>
+          <a className="back-link" href="/"><ArrowIcon direction="right" />العودة إلى الوظائف</a>
         </div>
       </header>
 
-      <main>
-        <section className="hero" aria-labelledby="page-title">
-          <div className="hero-inner">
-            <div><p className="eyebrow">فرصتك تبدأ من هنا</p><h1 id="page-title">انضم إلى فريق نجيك</h1><p className="hero-copy">نبحث عن أشخاص شغوفين بالتطوير وصناعة أفضل تجربة لعملائنا. شاركنا خبراتك وطموحاتك.</p></div>
-            <div className="hero-facts"><div className="fact"><strong>3–5 دقائق</strong><span>الوقت المتوقع لإكمال الطلب</span></div><div className="fact"><strong>PDF فقط</strong><span>السيرة الذاتية بحد أقصى 5 MB</span></div></div>
-          </div>
-        </section>
-
-        <div className="page-shell">
-          <aside className="journey-card" aria-labelledby="journey-title">
-            <h2 id="journey-title">ماذا بعد التقديم؟</h2><p>رحلة واضحة من الطلب إلى القرار.</p>
-            <ol>
-              {[['استلام الطلب', 'نسجّل بياناتك وسيرتك الذاتية.'], ['مراجعة الفريق', 'نراجع ملاءمة خبراتك للفرص.'], ['التواصل والمقابلة', 'نتواصل مع المرشحين الأنسب.'], ['القرار', 'نشاركك الخطوة التالية بوضوح.']].map(([title, text], index) => <li key={title}><span className="journey-number">{index + 1}</span><div><strong>{title}</strong><span>{text}</span></div></li>)}
-            </ol>
-            <div className="privacy-note">تُستخدم بياناتك لأغراض التوظيف فقط، ولا نطلب منك أي رسوم خلال عملية التوظيف.</div>
-          </aside>
-
-          <section className="application-card" aria-labelledby="application-title">
-            {submitted ? (
-              <div className="success-screen" role="status">
-                <div className="success-icon"><CheckIcon /></div><p className="panel-kicker">تم إرسال الطلب</p><h2>شكرًا لاهتمامك بالانضمام إلى نجيك.</h2><p>{serverMessage?.text}</p><a className="button button-primary" href="/">العودة إلى الرئيسية</a>
-              </div>
-            ) : (
-              <>
-                <div className="application-head">
-                  <div className="application-head-row"><div><h2 id="application-title">طلب الانضمام</h2><p>أكمل البيانات التالية، ثم راجعها قبل الإرسال.</p></div><span className="time-badge"><ClockIcon />3–5 دقائق</span></div>
-                  <nav className="stepper" aria-label="خطوات نموذج التوظيف">
-                    {steps.map((step, index) => <button key={step.short} type="button" className={`step-button ${index === currentStep ? 'is-active' : ''} ${index < currentStep ? 'is-complete' : ''}`} onClick={() => index <= furthestStep && moveToStep(index)} disabled={index > furthestStep} aria-current={index === currentStep ? 'step' : undefined}><span className="step-bar" /><span className="step-label">{step.short}</span></button>)}
-                  </nav>
-                </div>
-
-                {serverMessage?.type === 'error' && <div className="alert alert-error" role="alert">{serverMessage.text}</div>}
-
-                <form className="application-form" onSubmit={handleSubmit} noValidate>
-                  <section className="step-panel" aria-labelledby={`step-${currentStep}-title`}>
-                    <div className="panel-heading"><span className="panel-kicker">الخطوة {currentStep + 1} من 4</span><h3 id={`step-${currentStep}-title`} tabIndex="-1" ref={panelHeadingRef}>{steps[currentStep].title}</h3><p>{steps[currentStep].description}</p></div>
-
-                    {currentStep === 0 && <div className="form-grid">
-                      <Field className="full" label="الاسم الكامل (رباعي)" name="full_name" error={errors.full_name}><TextInput name="full_name" value={form.full_name} onChange={updateField} error={errors.full_name} autoComplete="name" maxLength="120" /></Field>
-                      <Field label="البريد الإلكتروني" name="email" error={errors.email} help="سنستخدمه للتواصل بخصوص طلبك."><TextInput className="ltr" type="email" name="email" value={form.email} onChange={updateField} error={errors.email} placeholder="name@example.com" autoComplete="email" /></Field>
-                      <Field label="رقم الجوال" name="phone" error={errors.phone}><TextInput className="ltr" type="tel" name="phone" value={form.phone} onChange={updateField} error={errors.phone} placeholder="+966 5X XXX XXXX" autoComplete="tel" /></Field>
-                      <div className="full"><Field label="رابط LinkedIn" name="linkedin_url" error={errors.linkedin_url} optional help="أضف رابط ملفك الشخصي الكامل على LinkedIn."><TextInput className="ltr" type="url" name="linkedin_url" value={form.linkedin_url} onChange={updateField} error={errors.linkedin_url} placeholder="https://www.linkedin.com/in/username" autoComplete="url" maxLength="255" /></Field></div>
-                      <div className="field full"><span className="group-label">تاريخ الميلاد <span className="required">*</span></span><div className="date-grid">
-                        <select name="birth_day" aria-label="اليوم" value={form.birth_day} onChange={updateField} aria-invalid={Boolean(errors.birth_day)}><option value="">اليوم</option>{Array.from({ length: 31 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}</select>
-                        <select name="birth_month" aria-label="الشهر" value={form.birth_month} onChange={updateField} aria-invalid={Boolean(errors.birth_month)}><option value="">الشهر</option>{months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select>
-                        <select name="birth_year" aria-label="السنة" value={form.birth_year} onChange={updateField} aria-invalid={Boolean(errors.birth_year)}><option value="">السنة</option>{years.map((year) => <option key={year} value={year}>{year}</option>)}</select>
-                      </div>{errors.birth_day && <small className="field-error">{errors.birth_day}</small>}</div>
-                      <Field label="المدينة" name="city" error={errors.city}><TextInput name="city" value={form.city} onChange={updateField} error={errors.city} placeholder="مثال: جدة" autoComplete="address-level2" /></Field>
-                      <Field label="الجنسية" name="nationality" error={errors.nationality}><TextInput name="nationality" value={form.nationality} onChange={updateField} error={errors.nationality} autoComplete="country-name" /></Field>
-                    </div>}
-
-                    {currentStep === 1 && <div className="form-grid">
-                      <div className="full"><Field label="المسمى الوظيفي المتقدم له" name="position" error={errors.position}><SelectInput name="position" value={form.position} onChange={updateField} error={errors.position} placeholder="اختر الوظيفة" options={positions} /></Field></div>
-                      <div className="full"><Field label="الوظيفة الحالية" name="current_job" optional><TextInput name="current_job" value={form.current_job} onChange={updateField} placeholder="اكتب مسماك الحالي إن وجد" /></Field></div>
-                      <Field label="حالة التفرغ" name="availability" error={errors.availability}><SelectInput name="availability" value={form.availability} onChange={updateField} error={errors.availability} placeholder="اختر حالة التفرغ" options={availabilityOptions} /></Field>
-                      <Field label="هل سبق التقديم لدينا؟" name="applied_before" error={errors.applied_before}><SelectInput name="applied_before" value={form.applied_before} onChange={updateField} error={errors.applied_before} placeholder="اختر الإجابة" options={appliedBeforeOptions} /></Field>
-                    </div>}
-
-                    {currentStep === 2 && <div className="form-grid">
-                      <Field label="أعلى مؤهل علمي" name="education" error={errors.education}><SelectInput name="education" value={form.education} onChange={updateField} error={errors.education} placeholder="اختر المؤهل" options={educationOptions.map((value) => [value, value])} /></Field>
-                      <Field label="التخصص العلمي" name="major" error={errors.major}><TextInput name="major" value={form.major} onChange={updateField} error={errors.major} placeholder="مثال: علوم الحاسب" /></Field>
-                      <div className="full"><Field label="سنوات الخبرة" name="experience" error={errors.experience}><SelectInput name="experience" value={form.experience} onChange={updateField} error={errors.experience} placeholder="اختر سنوات الخبرة" options={experienceOptions} /></Field></div>
-                    </div>}
-
-                    {currentStep === 3 && <>
-                      <div className="field"><label htmlFor="cv_file">السيرة الذاتية <span className="required">*</span></label><label className={`upload-box ${isDragging ? 'is-dragging' : ''}`} onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={() => setIsDragging(false)} onDrop={(event) => { event.preventDefault(); setIsDragging(false); selectFile(event.dataTransfer.files[0]); }}><input id="cv_file" type="file" accept="application/pdf,.pdf" onChange={(event) => selectFile(event.target.files[0])} /><span><span className="upload-icon"><UploadIcon /></span><span className="upload-title">اسحب ملف PDF هنا أو اضغط للاختيار</span><span className="upload-hint">ملف واحد بصيغة PDF، بحد أقصى 5 MB</span></span></label>{cvFile && !errors.cv_file && <p className="file-status">تم اختيار: {cvFile.name} ({(cvFile.size / 1048576).toFixed(1)} MB)</p>}{errors.cv_file && <small className="field-error">{errors.cv_file}</small>}</div>
-                      <div className="review-card"><h4>ملخص طلبك</h4><div className="review-grid">{summary.map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div></div>
-                      <label className="consent"><input type="checkbox" name="privacy_consent" checked={form.privacy_consent} onChange={updateField} /><span>أوافق على استخدام بياناتي وسيرتي الذاتية لغرض تقييم طلب التوظيف والتواصل معي بشأن الفرص المناسبة.</span></label>{errors.privacy_consent && <small className="field-error">{errors.privacy_consent}</small>}
-                      <button className="submit-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'جارٍ إرسال طلبك…' : 'إرسال طلب التوظيف'}</button>
-                    </>}
-                  </section>
-
-                  <div className="form-navigation"><button className="button button-secondary" type="button" onClick={() => moveToStep(currentStep - 1)} hidden={currentStep === 0}><ArrowIcon direction="right" />السابق</button>{currentStep < steps.length - 1 && <button className="button button-primary" type="button" onClick={handleNext}>التالي<ArrowIcon /></button>}</div>
-                </form>
-              </>
-            )}
+      {submitted ? (
+        <main className="success-page">
+          <section className="success-screen" role="status">
+            <div className="success-icon"><CheckIcon /></div>
+            <p className="panel-kicker">تم إرسال الطلب</p>
+            <h1>وصلنا طلبك بنجاح</h1>
+            <p>شكرًا لتقديمك. سيقوم فريق الموارد البشرية بمراجعة طلبك والتواصل معك عند توافق خبراتك مع الفرص المتاحة.</p>
           </section>
-        </div>
-      </main>
-      <footer className="footer"><div className="footer-inner"><p><strong>نجيك لبابك التجارية</strong> — نصنع تجربة خدمة أقرب وأسهل.</p><p>© {new Date().getFullYear()} جميع الحقوق محفوظة</p></div></footer>
+        </main>
+      ) : (
+        <main className="career-main">
+          <div className="career-layout">
+            <aside className="job-sidebar" aria-label="معلومات الوظيفة وخطوات الطلب">
+              <div className="job-overview">
+                <h2>{form.position ? optionLabel(positions, form.position) : 'مطور برمجيات'}</h2>
+                <div className="job-meta">
+                  <p><LocationIcon /><span>{form.city ? `${form.city}، المملكة العربية السعودية` : 'جدة، المملكة العربية السعودية'}</span></p>
+                  <p><BriefcaseIcon /><span>تقنية المعلومات</span></p>
+                  <p><ClockIcon /><span>{form.availability ? optionLabel(availabilityOptions, form.availability) : 'دوام كامل'}</span></p>
+                  <p><BuildingIcon /><span>مقر العمل أو عن بُعد</span></p>
+                </div>
+              </div>
+              <nav className="side-stepper" aria-label="خطوات نموذج التوظيف">
+                {steps.map((step, index) => (
+                  <button key={step.short} type="button" className={`side-step-button ${index === currentStep ? 'is-active' : ''} ${index < currentStep ? 'is-complete' : ''}`} onClick={() => index <= furthestStep && moveToStep(index)} disabled={index > furthestStep} aria-current={index === currentStep ? 'step' : undefined}>
+                    <span className="side-step-number">{index + 1}</span><span>{step.short}</span>
+                  </button>
+                ))}
+              </nav>
+            </aside>
+
+            <section className="application-card application-panel" aria-labelledby="application-title">
+              <div className="application-head">
+                <div><h1 id="application-title">قدّم طلبك للانضمام إلى فريق نجيك</h1><p>أكمل بياناتك التالية لتعبئة الطلب بشكل أسرع.</p></div>
+              </div>
+
+              {serverMessage?.type === 'error' && <div className="alert alert-error" role="alert">{serverMessage.text}</div>}
+
+              <form className="application-form" onSubmit={handleSubmit} noValidate>
+                <section className="step-panel" aria-labelledby={`step-${currentStep}-title`}>
+                  <div className="panel-heading"><h2 id={`step-${currentStep}-title`} tabIndex="-1" ref={panelHeadingRef}>{steps[currentStep].title}</h2><p>{steps[currentStep].description}</p></div>
+
+                  {currentStep === 0 && <div className="form-grid">
+                    <Field className="full" label="الاسم الكامل (رباعي)" name="full_name" error={errors.full_name}><TextInput name="full_name" value={form.full_name} onChange={updateField} error={errors.full_name} placeholder="مثال: محمد بن أحمد بن عبدالله آل سعود" autoComplete="name" maxLength="120" /></Field>
+                    <Field className="full" label="البريد الإلكتروني" name="email" error={errors.email} help="نستخدمه للتواصل بخصوص طلبك."><TextInput className="ltr" type="email" name="email" value={form.email} onChange={updateField} error={errors.email} placeholder="example@domain.com" autoComplete="email" /></Field>
+                    <Field className="full" label="رقم الجوال" name="phone" error={errors.phone}><div className="phone-control"><span className="country-code">+966</span><TextInput className="ltr" type="tel" name="phone" value={form.phone} onChange={updateField} error={errors.phone} placeholder="50 123 4567" autoComplete="tel" /></div></Field>
+                    <Field label="الجنسية" name="nationality" error={errors.nationality}><TextInput name="nationality" value={form.nationality} onChange={updateField} error={errors.nationality} placeholder="اكتب الجنسية" autoComplete="country-name" /></Field>
+                    <Field label="المدينة" name="city" error={errors.city}><TextInput name="city" value={form.city} onChange={updateField} error={errors.city} placeholder="اكتب المدينة" autoComplete="address-level2" /></Field>
+                    <div className="field full"><span className="group-label">تاريخ الميلاد <span className="required">*</span></span><div className="date-grid">
+                      <select name="birth_day" aria-label="اليوم" value={form.birth_day} onChange={updateField} aria-invalid={Boolean(errors.birth_day)}><option value="">اليوم</option>{Array.from({ length: 31 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}</select>
+                      <select name="birth_month" aria-label="الشهر" value={form.birth_month} onChange={updateField} aria-invalid={Boolean(errors.birth_month)}><option value="">الشهر</option>{months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select>
+                      <select name="birth_year" aria-label="السنة" value={form.birth_year} onChange={updateField} aria-invalid={Boolean(errors.birth_year)}><option value="">السنة</option>{years.map((year) => <option key={year} value={year}>{year}</option>)}</select>
+                    </div>{errors.birth_day && <small className="field-error">{errors.birth_day}</small>}</div>
+                    <Field className="full" label="رابط LinkedIn" name="linkedin_url" error={errors.linkedin_url} optional><TextInput className="ltr" type="url" name="linkedin_url" value={form.linkedin_url} onChange={updateField} error={errors.linkedin_url} placeholder="https://www.linkedin.com/in/username" autoComplete="url" maxLength="255" /></Field>
+                    {uploadField}
+                  </div>}
+
+                  {currentStep === 1 && <div className="form-grid">
+                    <Field className="full" label="المسمى الوظيفي المتقدم له" name="position" error={errors.position}><SelectInput name="position" value={form.position} onChange={updateField} error={errors.position} placeholder="اختر الوظيفة" options={positions} /></Field>
+                    <Field className="full" label="الوظيفة الحالية" name="current_job" optional><TextInput name="current_job" value={form.current_job} onChange={updateField} placeholder="اكتب مسماك الحالي إن وجد" /></Field>
+                    <Field label="حالة التفرغ" name="availability" error={errors.availability}><SelectInput name="availability" value={form.availability} onChange={updateField} error={errors.availability} placeholder="اختر حالة التفرغ" options={availabilityOptions} /></Field>
+                    <Field label="هل سبق التقديم لدينا؟" name="applied_before" error={errors.applied_before}><SelectInput name="applied_before" value={form.applied_before} onChange={updateField} error={errors.applied_before} placeholder="اختر الإجابة" options={appliedBeforeOptions} /></Field>
+                  </div>}
+
+                  {currentStep === 2 && <div className="form-grid">
+                    <Field label="أعلى مؤهل علمي" name="education" error={errors.education}><SelectInput name="education" value={form.education} onChange={updateField} error={errors.education} placeholder="اختر المؤهل" options={educationOptions.map((value) => [value, value])} /></Field>
+                    <Field label="التخصص العلمي" name="major" error={errors.major}><TextInput name="major" value={form.major} onChange={updateField} error={errors.major} placeholder="مثال: علوم الحاسب" /></Field>
+                    <Field className="full" label="سنوات الخبرة" name="experience" error={errors.experience}><SelectInput name="experience" value={form.experience} onChange={updateField} error={errors.experience} placeholder="اختر سنوات الخبرة" options={experienceOptions} /></Field>
+                  </div>}
+
+                  {currentStep === 3 && <>
+                    <div className="review-card"><h3>ملخص طلبك</h3><div className="review-grid">{summary.map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div></div>
+                    <label className="consent"><input type="checkbox" name="privacy_consent" checked={form.privacy_consent} onChange={updateField} /><span>أوافق على استخدام بياناتي وسيرتي الذاتية لغرض تقييم طلب التوظيف والتواصل معي بشأن الفرص المناسبة.</span></label>{errors.privacy_consent && <small className="field-error">{errors.privacy_consent}</small>}
+                    <button className="submit-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'جارٍ إرسال طلبك…' : 'إرسال طلب التوظيف'}</button>
+                  </>}
+                </section>
+
+                <div className="form-navigation">
+                  <button className="button button-secondary" type="button" onClick={() => moveToStep(currentStep - 1)} hidden={currentStep === 0}>السابق</button>
+                  {currentStep < steps.length - 1 && <button className="button button-primary" type="button" onClick={handleNext}>التالي</button>}
+                </div>
+              </form>
+            </section>
+          </div>
+        </main>
+      )}
+
+      <footer className="footer"><div className="footer-inner"><img src="/njik-logo.png" alt="نجيك" /><nav aria-label="روابط الموقع"><a href="#">الخصوصية</a><a href="#">الشروط والأحكام</a><a href="#">تواصل معنا</a></nav></div></footer>
     </div>
   );
 }
